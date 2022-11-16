@@ -36,8 +36,8 @@ homicide_data %>%
 homicide_1=
 homicide_data %>%
   mutate(case_done= case_when(
-        disposition %in% c("Closed without arrest","Open/No arrest") ~"no",
-        disposition %in% "Closed by arrest" ~"yes"))
+        disposition %in% c("Closed without arrest","Open/No arrest") ~"unsolved",
+        disposition %in% "Closed by arrest" ~"solved"))
 
 homicide_2=homicide_1 %>%
   group_by(city_state, case_done) %>%
@@ -45,16 +45,15 @@ homicide_2=homicide_1 %>%
   pivot_wider(
     names_from = "case_done",
     values_from = "count") %>%
-  mutate(total= sum(no+yes))
+  mutate(total= sum(unsolved+solved))
 
 homicide_Bal=  
   homicide_2 %>%
   filter(city_state %in% "Baltimore, MD")
 
 homicide_Bal_stats=
-  prop.test(
-           x=pull(homicide_Bal, no),
-           n=pull(homicide_Bal, total),
+  prop.test(x=pull(homicide_Bal, unsolved),
+            n=pull(homicide_Bal,total),
            alternative="two.sided",
            conf.level=0.95 ) %>%
            broom::tidy() %>%
@@ -64,20 +63,25 @@ homicide_Bal_stats=
 > Now run `prop.test` for each of the cities in your dataset, and extract both the proportion of unsolved homicides and the confidence interval for each. Do this within a "tidy" pipeline, making use of `purrr::map`, `purrr::map2`, list columns and `unnest` as necessary to create a tidy dataframe with estimated proportions and CIs for each city.
 
 ```{r}
-  proptest= function(no,total) {
-    prop.test(
-           x=pull(homicide_2, no),
-           n=pull(homicide_2, total),
+proptest=function(unsolved, total){
+  prop.test(x=homicide_2$unsolved,
+            n=homicide_2$total,
            alternative="two.sided",
            conf.level=0.95 ) %>%
            broom::tidy() %>%
-      select(conf.low,conf.high,estimate)
-  }
-  
-  homicide_Total_stats=
-  proptest(x=pull(homicide_2, no),
-           n=pull(homicide_2, total)) %>%
-    output=map(x)
+           select(conf.low,conf.high,estimate)
+}
+
+homicide_nest= nest(homicide_2, data=c(unsolved, total))  
+
+map(homicide_nest$data, proptest)
+
+map2(.x=homicide_2$unsolved, .y =homicide_2$total, ~proptest(unsolved = .x, total = .y))
+
+output=prop.test(x=homicide_2$unsolved,
+            n=homicide_2$total,
+           alternative="two.sided",
+           conf.level=0.95 ) 
 ```
 
 ### Problem 3

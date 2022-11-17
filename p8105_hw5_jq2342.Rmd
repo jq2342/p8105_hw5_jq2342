@@ -2,7 +2,7 @@
 title: "p8105_hw5_jq2342.Rmd"
 author: "Junyu QI"
 date: "`r Sys.Date()`"
-output: html_document
+output: github_document
 ---
 
 ## Homework 5
